@@ -232,6 +232,9 @@ class Prover:
             Polynomial([Scalar(1)] + [Scalar(0)] * (group_order - 1), Basis.LAGRANGE)
         ).ifft()
 
+        # group_order = 8
+        # root of identity: H
+        # ZH(X) = x^8 - 1
         # x^8 - 1 coeffs are [-1, 0, 0, 0, 0, 0, 0, 0, 1]
         # which needs 9 points(n + 1) to determine the polynomial
         ZH_array = [Scalar(-1)] + [Scalar(0)] * (group_order - 1) + [Scalar(1)]
@@ -241,6 +244,9 @@ class Prover:
         # reference: https://github.com/sec-bit/learning-zkp/blob/master/plonk-intro-cn/4-plonk-constraints.md
         gate_constraints_coeff = (
             # TODO: your code
+            QL_coeff * A_coeff + QR_coeff * B_coeff
+                + QM_coeff * A_coeff * B_coeff 
+                + QO_coeff * C_coeff + QC_coeff + PI_coeff
         )
 
         normal_roots = Polynomial(
@@ -267,8 +273,15 @@ class Prover:
 
         # construct permutation polynomial
         # reference: https://github.com/sec-bit/learning-zkp/blob/master/plonk-intro-cn/3-plonk-permutation.md
+        GX_coeff = self.rlc(A_coeff, S1_coeff) * self.rlc(B_coeff, S2_coeff) * self.rlc(C_coeff, S3_coeff)
+
+        # id_a = H (root of identity)
+        # we already have: roots_coeff
+        # id_b = G^2 * id_a
+        # id_c = G^3 
+        FX_coeff = self.rlc(A_coeff, roots_coeff) * self.rlc(B_coeff, roots_coeff * Scalar(2)) * self.rlc(C_coeff, roots_coeff * Scalar(3))
         permutation_grand_product_coeff = (
-            # TODO: your code
+            ZW_coeff * GX_coeff - Z_coeff * FX_coeff
         )
 
         permutation_first_row_coeff = (Z_coeff - Scalar(1)) * L0_coeff
@@ -391,6 +404,7 @@ class Prover:
             W_t, W_t_quot,
         )
 
+    # random linear combination
     def rlc(self, term_1, term_2):
         return term_1 + term_2 * self.beta + self.gamma
 
